@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unit Circle Spin Game v2.0</title>
+<style>
+body{font-family:Tahoma,sans-serif;background:#eef5ff;text-align:center}
+.wrap{max-width:1000px;margin:auto;background:#fff;padding:15px;border-radius:12px}
+button{padding:10px 16px;margin:4px;font-size:16px}
+#ans{font-size:20px;margin-top:10px}
+svg{background:white}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎯 Unit Circle Spin Game v2.0</h1>
+<div>⏰ <span id="timer">60</span> วินาที | ⭐ <span id="score">0</span> | 🏆 <span id="high">0</span></div>
+
+<svg width="560" height="560">
+<line x1="280" y1="40" x2="280" y2="520" stroke="black"/>
+<line x1="40" y1="280" x2="520" y2="280" stroke="black"/>
+<circle cx="280" cy="280" r="190" fill="none" stroke="blue" stroke-width="3"/>
+<g id="labels"></g>
+<line id="needle" x1="280" y1="280" x2="470" y2="280" stroke="red" stroke-width="5"/>
+<circle id="point" cx="470" cy="280" r="8" fill="red"/>
+<circle cx="280" cy="280" r="6" fill="black"/>
+</svg>
+
+<div>มุมปัจจุบัน: <span id="angle">-</span></div>
+
+<button onclick="spin()">สุ่มมุม</button>
+<button onclick="showSin()">เฉลย sin</button>
+<button onclick="showCos()">เฉลย cos</button>
+<button onclick="showAll()">เฉลยทั้งหมด</button>
+
+<div id="ans"></div>
+</div>
+
+<script>
+const values={0:["1","0"],30:["√3/2","1/2"],45:["√2/2","√2/2"],60:["1/2","√3/2"],90:["0","1"],120:["-1/2","√3/2"],135:["-√2/2","√2/2"],150:["-√3/2","1/2"],180:["-1","0"],210:["-√3/2","-1/2"],225:["-√2/2","-√2/2"],240:["-1/2","-√3/2"],270:["0","-1"],300:["1/2","-√3/2"],315:["√2/2","-√2/2"],330:["√3/2","-1/2"],360:["1","0"]};
+const angles=Object.keys(values).map(Number);
+const labels=document.getElementById("labels");
+
+angles.forEach(a=>{
+ let rad=a*Math.PI/180;
+ let x=280+220*Math.cos(rad);
+ let y=280-220*Math.sin(rad);
+ let t=document.createElementNS("http://www.w3.org/2000/svg","text");
+ t.setAttribute("x",x); t.setAttribute("y",y);
+ t.setAttribute("font-size","13");
+ t.setAttribute("text-anchor","middle");
+ t.textContent=a+"°";
+ labels.appendChild(t);
+});
+
+let current=0,score=0,time=60;
+let high=localStorage.getItem("unitCircleHighV2")||0;
+document.getElementById("high").textContent=high;
+
+function tickSound(){
+ try{
+  const c=new(window.AudioContext||window.webkitAudioContext)();
+  const o=c.createOscillator(),g=c.createGain();
+  o.connect(g); g.connect(c.destination);
+  o.frequency.value=1000; g.gain.value=0.03;
+  o.start(); o.stop(c.currentTime+0.02);
+ }catch(e){}
+}
+
+function setNeedle(angle){
+ let rad=angle*Math.PI/180;
+ let x=280+190*Math.cos(rad);
+ let y=280-190*Math.sin(rad);
+ document.getElementById("needle").setAttribute("x2",x);
+ document.getElementById("needle").setAttribute("y2",y);
+ document.getElementById("point").setAttribute("cx",x);
+ document.getElementById("point").setAttribute("cy",y);
+}
+
+function animateSpin(target){
+ let start=0;
+ let rounds=3+Math.floor(Math.random()*3); //3-5 รอบ
+ let end=rounds*360+target;
+ let duration=4000;
+ let startTime=null;
+ let tick=setInterval(tickSound,100);
+
+ function frame(ts){
+   if(!startTime) startTime=ts;
+   let p=(ts-startTime)/duration;
+   if(p>1)p=1;
+   let ease=1-Math.pow(1-p,3);
+   let ang=start+(end-start)*ease;
+   setNeedle(ang);
+   if(p<1){
+      requestAnimationFrame(frame);
+   }else{
+      clearInterval(tick);
+      setNeedle(target);
+      document.getElementById("angle").textContent=target+"°";
+      score+=5;
+      document.getElementById("score").textContent=score;
+   }
+ }
+ requestAnimationFrame(frame);
+}
+
+function spin(){
+ document.getElementById("ans").innerHTML="";
+ current=angles[Math.floor(Math.random()*angles.length)];
+ animateSpin(current);
+}
+
+function showSin(){
+ document.getElementById("ans").innerHTML="sin "+current+"° = "+values[current][1];
+}
+function showCos(){
+ document.getElementById("ans").innerHTML="cos "+current+"° = "+values[current][0];
+}
+function showAll(){
+ document.getElementById("ans").innerHTML=
+ "cos "+current+"° = "+values[current][0]+"<br>"+
+ "sin "+current+"° = "+values[current][1]+"<br>"+
+ "พิกัด ("+values[current][0]+", "+values[current][1]+")";
+}
+
+const timer=setInterval(()=>{
+ time--;
+ document.getElementById("timer").textContent=time;
+ if(time<=0){
+   clearInterval(timer);
+   if(score>high){
+      localStorage.setItem("unitCircleHighV2",score);
+      high=score;
+   }
+   alert("หมดเวลา! คะแนน "+score+" | High Score "+high);
+ }
+},1000);
+
+setNeedle(0);
+</script>
+</body>
+</html>
